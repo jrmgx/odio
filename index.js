@@ -45,12 +45,12 @@ elementStart.addEventListener('click', async () => {
     // Analyser
     const analyserNode = audioContext.createAnalyser();
     analyserNode.fftSize = 1024;
-    const bufferLength = analyserNode.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    analyserNode.getByteTimeDomainData(dataArray);
+    const frequencyBufferLength = analyserNode.frequencyBinCount;
+    const timeDomainDataArray = new Uint8Array(frequencyBufferLength);
+    const frequencyDataArray = new Uint8Array(frequencyBufferLength)
 
     // Audio Worklet
-    await audioContext.audioWorklet.addModule('random-noise-processor.js')
+    await audioContext.audioWorklet.addModule('random-noise-processor.js?v1')
     const processorNode = new AudioWorkletNode(audioContext, 'random-noise-processor')
     processorNode.connect(gainNode);
     processorNode.connect(analyserNode);
@@ -93,32 +93,37 @@ elementStart.addEventListener('click', async () => {
     }
 
     // Analyser visual output
+    canvasContext.fillStyle = 'rgb(0, 0, 0)';
+    canvasContext.fillRect(0, 0, WIDTH, HEIGHT); 
+    let frame = 0;
     function draw() {
         requestAnimationFrame(draw);
+        frame++;
 
-        analyserNode.getByteTimeDomainData(dataArray);
+        analyserNode.getByteTimeDomainData(timeDomainDataArray);
+        analyserNode.getByteFrequencyData(frequencyDataArray);
 
-        canvasContext.fillStyle = 'rgb(200, 200, 200)';
+        canvasContext.fillStyle = 'rgba(0, 0, 0, 0.2)';
         canvasContext.fillRect(0, 0, WIDTH, HEIGHT); 
+
         canvasContext.lineWidth = 2;
-        canvasContext.strokeStyle = 'rgb(0, 0, 0)';
+        canvasContext.strokeStyle = 'hsl(' + (frame * 5) % 360 + ', 100%, 50%)';
         canvasContext.beginPath();
         
-        const sliceWidth = WIDTH * 1.0 / bufferLength;
+        // Draw the time domain chart.
+        const sliceWidth = WIDTH * 1.0 / frequencyBufferLength;
         let x = 0;
-        for (let i = 0; i < bufferLength; i++) {
-            let v = dataArray[i] / 128.0;
+        for (let i = 0; i < frequencyBufferLength; i++) {
+            let v = timeDomainDataArray[i] / 128.0;
             let y = v * HEIGHT / 2;
-
             if (i === 0) {
                 canvasContext.moveTo(x, y);
             } else {
                 canvasContext.lineTo(x, y);
             }
-
             x += sliceWidth;
         }
-        
+
         canvasContext.lineTo(elementCanvas.width, elementCanvas.height / 2);
         canvasContext.stroke();
     }
