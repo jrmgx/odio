@@ -1,105 +1,108 @@
-document.addEventListener('DOMContentLoaded', function () {
-
 const WIDTH = 500;
 const HEIGHT = 500;
 
+// HTML elements
 const elementStart = document.querySelector('#start');
-const container = document.querySelector('#container');
-const inputX = document.querySelector('#x');
-const inputY = document.querySelector('#y')
-const valueX = document.querySelector('#x-value');
-const valueY = document.querySelector('#y-value');
-const inputFx = document.querySelector('#fx');
+const elementContainer = document.querySelector('#container');
+const elementSliderX = document.querySelector('#x');
+const elementSliderY = document.querySelector('#y')
+const elementSliderVolume = document.querySelector('#volume')
+const elementValueX = document.querySelector('#x-value');
+const elementValueY = document.querySelector('#y-value');
+const elementInputFx = document.querySelector('#fx');
 const elementError = document.querySelector('#error');
-const canvas = document.querySelector('canvas');
-const canvasCtx = canvas.getContext("2d");
+const elementCanvas = document.querySelector('canvas');
+const canvasContext = elementCanvas.getContext("2d");
 
-let hash = window.location.hash.substring(1);
-let sharedFx = decodeURIComponent(hash);
+// Load hash data
+const hash = window.location.hash.substring(1);
+const sharedFx = decodeURIComponent(hash);
 if (sharedFx.length > 0) {
-    let parts = sharedFx.split('#');
-    inputFx.value = parts[0]
-    inputX.value = parseInt(parts[1] || 128);
-    inputY.value = parseInt(parts[2] || 128);
+    const parts = sharedFx.split('#');
+    elementInputFx.value = parts[0]
+    elementSliderX.value = parseInt(parts[1] || 128);
+    elementSliderY.value = parseInt(parts[2] || 128);
 }
 
 function updateHash(fx, x, y) {
     window.location.hash = encodeURIComponent(fx + '#' + x + '#' + y);
 }
 
-const main = async function () {
+elementStart.addEventListener('click', async () => {
 
-    container.style.display = 'block';
+    // Start button action
+    elementContainer.style.display = 'block';
     elementStart.style.display = 'none';
 
     const audioContext = new AudioContext()
 
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 1024;
-    let bufferLength = analyser.frequencyBinCount;
-    let dataArray = new Uint8Array(bufferLength);
-    analyser.getByteTimeDomainData(dataArray);
+    // Gain
+    const gainNode = audioContext.createGain();
+    gainNode.connect(audioContext.destination);
+    gainNode.gain.setValueAtTime(elementSliderVolume.valueAsNumber / 100, audioContext.currentTime)
+    elementSliderVolume.addEventListener('input', () => gainNode.gain.setValueAtTime(elementSliderVolume.valueAsNumber / 100, audioContext.currentTime));
 
+    // Analyser
+    const analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 1024;
+    const bufferLength = analyserNode.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyserNode.getByteTimeDomainData(dataArray);
+
+    // Audio Worklet
     await audioContext.audioWorklet.addModule('random-noise-processor.js')
     const processorNode = new AudioWorkletNode(audioContext, 'random-noise-processor')
-    processorNode.connect(audioContext.destination)
-    processorNode.connect(analyser);
-    processorNode.port.onmessage = (e) => {
-        const message = e.data;
+    processorNode.connect(gainNode);
+    processorNode.connect(analyserNode);
+    processorNode.port.onmessage = (event) => {
+        const message = event.data;
         elementError.style.display = message.success ? 'none' : 'inline';
     }
-    processorNode.port.postMessage(inputFx.value);
+    processorNode.port.postMessage(elementInputFx.value);
 
-    
-    processorNodeX = processorNode.parameters.get("x");
-    inputXListener = function () {
-        valueX.textContent = (inputX.valueAsNumber/100).toFixed(2).replace('.', '');
-        processorNodeX.setValueAtTime(inputX.valueAsNumber, audioContext.currentTime);  
-        updateHash(inputFx.value, inputX.valueAsNumber, inputY.valueAsNumber);  
+    inputXListener = () => {
+        elementValueX.textContent = (elementSliderX.valueAsNumber / 100).toFixed(2).replace('.', '');
+        const processorNodeParamX = processorNode.parameters.get('x');
+        processorNodeParamX.setValueAtTime(elementSliderX.valueAsNumber, audioContext.currentTime);
     };
-    inputX.addEventListener('input', inputXListener);
+    elementSliderX.addEventListener('input', inputXListener);
+    elementSliderX.addEventListener('change', () => updateHash(elementInputFx.value, elementSliderX.valueAsNumber, elementSliderY.valueAsNumber));
     inputXListener();
 
-    processorNodeY = processorNode.parameters.get("y");
-    inputYListener = function () {
-        valueY.textContent = (inputY.valueAsNumber/100).toFixed(2).replace('.', '');
-        processorNodeY.setValueAtTime(inputY.valueAsNumber, audioContext.currentTime); 
-        updateHash(inputFx.value, inputX.valueAsNumber, inputY.valueAsNumber);   
+    inputYListener = () => {
+        elementValueY.textContent = (elementSliderY.valueAsNumber / 100).toFixed(2).replace('.', '');
+        const processorNodeParamY = processorNode.parameters.get('y');
+        processorNodeParamY.setValueAtTime(elementSliderY.valueAsNumber, audioContext.currentTime); 
     };
-    inputY.addEventListener('input', inputYListener);
+    elementSliderY.addEventListener('input', inputYListener);
+    elementSliderY.addEventListener('change', () => updateHash(elementInputFx.value, elementSliderX.valueAsNumber, elementSliderY.valueAsNumber));
     inputYListener();
 
-    inputFx.addEventListener('change', function () {
-        updateHash(inputFx.value, inputX.valueAsNumber, inputY.valueAsNumber);
-        processorNode.port.postMessage(inputFx.value);
+    elementInputFx.addEventListener('change', () => {
+        updateHash(elementInputFx.value, elementSliderX.valueAsNumber, elementSliderY.valueAsNumber);
+        processorNode.port.postMessage(elementInputFx.value);
     });
 
-    function init() {
-        navigator
-            .mediaDevices
-            .getUserMedia({audio: true})
-            .then(gotStream)
-            .catch(function (error) {
-                console.error(error);
-            });
-    }
-    init();
-
-    function gotStream(stream) {
-        let source = audioContext.createMediaStreamSource(stream);
-        source.connect(processorNode);
+    // Microphone
+    try {
+        let microphoneStream = await navigator.mediaDevices.getUserMedia({audio: true});
+        let microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
+        microphoneSource.connect(processorNode);
+    } catch (error) {
+        console.error(error);
     }
 
+    // Analyser visual output
     function draw() {
         requestAnimationFrame(draw);
 
-        analyser.getByteTimeDomainData(dataArray);
+        analyserNode.getByteTimeDomainData(dataArray);
 
-        canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-        canvasCtx.fillRect(0, 0, WIDTH, HEIGHT); 
-        canvasCtx.lineWidth = 2;
-        canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
-        canvasCtx.beginPath();
+        canvasContext.fillStyle = 'rgb(200, 200, 200)';
+        canvasContext.fillRect(0, 0, WIDTH, HEIGHT); 
+        canvasContext.lineWidth = 2;
+        canvasContext.strokeStyle = 'rgb(0, 0, 0)';
+        canvasContext.beginPath();
         
         const sliceWidth = WIDTH * 1.0 / bufferLength;
         let x = 0;
@@ -108,19 +111,17 @@ const main = async function () {
             let y = v * HEIGHT / 2;
 
             if (i === 0) {
-                canvasCtx.moveTo(x, y);
+                canvasContext.moveTo(x, y);
             } else {
-                canvasCtx.lineTo(x, y);
+                canvasContext.lineTo(x, y);
             }
 
             x += sliceWidth;
         }
         
-        canvasCtx.lineTo(canvas.width, canvas.height / 2);
-        canvasCtx.stroke();
+        canvasContext.lineTo(elementCanvas.width, elementCanvas.height / 2);
+        canvasContext.stroke();
     }
     draw();
 
-}
-elementStart.addEventListener('click', main);
 });

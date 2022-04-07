@@ -1,7 +1,9 @@
 # Odio
 
-from: <u>O</u>scillator and Au<u>dio</u>  
+From: <u>O</u>scillator and Au<u>dio</u>  
 <a href="http://kymatica.com/apps/bitwiz" target="_blank">Heavily inspired from BitWiz Audio Synth</a>
+
+Check it live at: [jrmgx.github.io/odio/](https://jrmgx.github.io/odio/)
 
 ## Start the project locally
 
