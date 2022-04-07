@@ -8,24 +8,38 @@
     <meta name="description" content="Generative audio made with your own code.">
     <meta name="mobile-web-app-capable" content="yes">
     <style>
-        html { background: black; color: white; }
+        html { background: black; color: white; font-family: sans-serif; }
+        html, body, #start { margin: 0; padding: 0; height: 100%; }
+        #start { display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        #start > * { padding: 2rem; }
+        #start .start { cursor: pointer; font-size: 2rem; }
         #container {display: none; }
         #error {color: red;display: none; }
     </style>
 </head>
 <body>
-    <div id="start">START</div>
+    <div id="start">
+        <div>
+            <b>⚠️ Warning!</b><hr>
+            This experiment produces very uneasy and loud sounds.<hr>
+            It is recommended to wear a headset and start with the volume down.<hr>
+            It also displays flashy and rapid changing images.
+        </div>
+        <div class="start">🌀 START 🌀</div>
+    </div>
     <div id="container">
         <input type="text" value="t" id="fx" style="width: 500px;"><button>Share</button><br>
         <br>x: <input type="range" min="0" max="255" value="128" id="x"> <span id="x-value">128</span>
         <br>y: <input type="range" min="0" max="255" value="128" id="y"> <span id="y-value">128</span>
+        <br>volume: <input type="range" min="0" max="100" value="10" id="volume">
         <br>You can use variables from a to j, they will be kept from frame to frame
         <br>You can use cos(expr) [0, 255] / sin(expr) [0, 255] and rand() [0, 255]
         <br>You can use m as the microphone input [0, 255]
         <br><span id="error">Error in expression!</span>
         <br>
         <canvas height="500" width="500"></canvas><br>
-        <a href="http://kymatica.com/apps/bitwiz" target="_blank">Heavily inspired from BitWiz Audio Synth</a>
+        <a href="http://kymatica.com/apps/bitwiz" target="_blank">Heavily inspired from BitWiz Audio Synth</a><br>
+        <a href="https://github.com/jrmgx/odio" target="_blank">See/get the code</a>
     </div>
 
     <script src="index.js"></script>

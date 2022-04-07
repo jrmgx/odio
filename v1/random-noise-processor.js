@@ -37,7 +37,7 @@ class RandomNoiseProcessor extends AudioWorkletProcessor {
                 // Send message to parent
                 this.port.postMessage({success: false});
             }
-            console.log(this.f);
+            console.log(this.f + ' v1');
         }
     }
     
@@ -52,12 +52,24 @@ class RandomNoiseProcessor extends AudioWorkletProcessor {
         return ((Math.sin(x) + 1) / 2) * 255;
     }
 
+    sin0 (x) {
+        return Math.sin(x);
+    }
+
     cos (x) {
         return ((Math.cos(x) + 1) / 2) * 255;
     }
 
+    cos0 (x) {
+        return Math.cos(x);
+    }
+
     rand (x) {
         return Math.random() * 256;
+    }
+
+    rand0 (x) {
+        return Math.random() > 0.5 ? 0 : 1;
     }
 
     process (inputs, outputs, parameters) {
